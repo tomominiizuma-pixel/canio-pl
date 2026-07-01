@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>かにを｜PL管理ツール</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1B3659;--navy2:#254F84;--bg:#EEF2F7;--surface:#fff;
+  --border:#D1DCE8;--text:#111827;--muted:#6B7280;
+  --pos:#059669;--neg:#DC2626;--tgt:#4F46E5;--warn:#D97706;
+  --prov:#9CA3AF;--alt:#F6F9FC;--cat:#EBF0F8;
+  --jp:#2563EB;--halal:#059669;--other:#7C3AED;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+.hdr{background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:13px 20px}
+.hdr h1{font-size:16px;font-weight:700}
+.hdr span{font-size:11px;opacity:.6}
+.tabs{background:var(--navy2);display:flex;padding:0 20px}
+.tab{padding:9px 18px;color:rgba(255,255,255,.55);cursor:pointer;font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;transition:all .12s}
+.tab:hover{color:#fff}.tab.on{color:#fff;border-bottom-color:#fff}
+.body{display:flex;height:calc(100vh - 74px)}
+.sidebar{width:228px;min-width:228px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:12px}
+.main-area{flex:1;overflow:auto;padding:16px}
+.panel{display:none}.panel.on{display:block}
+.sb-section{margin-bottom:16px}
+.sb-title{font-size:10px;font-weight:700;color:var(--navy);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:8px}
+.inp-row{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.inp-row label{font-size:11px;color:var(--muted)}
+.inp-row input{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-variant-numeric:tabular-nums}
+.inp-row input:focus{outline:none;border-color:var(--tgt);box-shadow:0 0 0 2px rgba(79,70,229,.12)}
+.inp-row .hint{font-size:10px;color:var(--prov)}
+.bw{display:inline-block;background:#FEF3C7;color:var(--warn);font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:3px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:7px;background:var(--surface);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+thead th{background:var(--navy);color:#fff;padding:7px 10px;text-align:right;white-space:nowrap;font-size:11px;font-weight:600;position:sticky;top:0;z-index:2}
+thead th:first-child{text-align:left;position:sticky;left:0;z-index:3;min-width:150px}
+thead th.grp{text-align:center;font-size:10px;letter-spacing:.04em}
+td{padding:6px 10px;text-align:right;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap}
+td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1;border-right:1px solid var(--border);font-weight:500}
+tr:nth-child(even) td{background:var(--alt)}
+tr:nth-child(even) td:first-child{background:var(--alt)}
+tr.cat td{background:var(--cat)!important;font-weight:700;font-size:11px;color:var(--navy);letter-spacing:.04em}
+tr.cat td:first-child{background:var(--cat)!important}
+tr.tot td{background:#EDF2FF!important;font-weight:700;border-top:2px solid var(--tgt)}
+tr.profit td{background:#ECFDF5!important;font-weight:700;border-top:2px solid var(--pos)}
+tr.loss td{background:#FEF2F2!important;font-weight:700;border-top:2px solid var(--neg)}
+tr.sub td:first-child{padding-left:22px;font-weight:400;color:var(--muted);font-size:11.5px}
+.pos{color:var(--pos);font-weight:600}.neg{color:var(--neg);font-weight:600}
+.prov{color:var(--prov)}.tgt{color:var(--tgt)}
+.alert{background:#FEF9EC;border:1px solid #FCD34D;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:12px;color:#78350F;line-height:1.6}
+.mom-note{background:#F0F4FF;border:1px solid #C7D4F5;border-radius:7px;padding:12px 14px;margin-bottom:10px;font-size:12px;line-height:1.7}
+.mom-note-title{font-weight:700;color:var(--navy);margin-bottom:6px;font-size:13px}
+.mom-note-body p{margin-bottom:6px}
+.sratio-grid{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.sratio-chip{display:flex;flex-direction:column;align-items:center;padding:5px 8px;border-radius:5px;font-size:11px;min-width:48px;border:1px solid transparent}
+.sratio-chip .mo{font-weight:700;font-size:10px;margin-bottom:1px}
+.sratio-chip .rat{font-weight:700;font-size:12px}
+.sratio-chip .mom{font-size:10px;margin-top:1px}
+.chip-up{background:#ECFDF5;border-color:#6EE7B7;color:#065F46}
+.chip-dn{background:#FEF2F2;border-color:#FECACA;color:#991B1B}
+.chip-first{background:#EEF2F7;border-color:#D1DCE8;color:#374151}
+/* sim */
+.ctrl-grid{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ctrl-item label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
+.ctrl-item input{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-variant-numeric:tabular-nums}
+.ctrl-item .hint{font-size:10px;color:var(--prov);display:block;margin-top:2px}
+.sec-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px}
+.sub-title{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;padding-top:4px}
+/* legend */
+.legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:8px;align-items:center}
+.leg{display:flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%}
+/* KPI header colours */
+th.jp{background:#1E4A96}
+th.halal{background:#065F46}
+th.other{background:#5B21B6}
+th.weekend{background:#1B3659}
+th.weekday{background:#254F84}
+/* assum */
+.assum-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:14px}
+.card h3{font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px}
+.kv{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--muted)}.kv .v{font-weight:600;font-variant-numeric:tabular-nums}
+.logic-list{list-style:none;padding:0}
+.logic-list li{padding:5px 0;border-bottom:1px dashed var(--border);font-size:12px}
+.logic-list li:last-child{border-bottom:none}
+code{background:var(--bg);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px;color:var(--tgt)}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <h1>🦀 かにを｜PL管理ツール</h1>
+  <span>FY2026　単位：円　客単価ベース：議事録より主力2,300円・実績2,432円・目標2,500円</span>
+</div>
+<div class="tabs">
+  <div class="tab on" onclick="showTab('yojitsu',this)">① 予実管理表</div>
+  <div class="tab" onclick="showTab('sim',this)">② PLシミュレーション</div>
+  <div class="tab" onclick="showTab('assum',this)">③ 前提情報・ロジック</div>
+</div>
+<div class="body">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-section">
+    <div class="sb-title">👥 人件費設定</div>
+    <div class="inp-row"><label>RVSS 人数</label><input type="number" id="i_rvss_n" value="2" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>RVSS 月額（円）</label><input type="number" id="i_rvss_w" value="80000" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>正社員 人数</label><input type="number" id="i_reg_n" value="5" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>正社員 月額（円）</label><input type="number" id="i_reg_w" value="300000" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>バイト 人数 <span class="bw">要入力</span></label><input type="number" id="i_pt_n" value="0" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>バイト 月間時間/人</label><input type="number" id="i_pt_h" value="0" min="0" oninput="compute()"></div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-title">🥩 食材費（要確認）</div>
+    <div class="inp-row"><label>私福堂</label><input type="number" id="i_shim" value="30000" min="0" oninput="compute()"><span class="hint">金額確認中</span></div>
+    <div class="inp-row"><label>アスクル</label><input type="number" id="i_askul" value="100000" min="0" oninput="compute()"><span class="hint">金額確認中</span></div>
+    <div class="inp-row"><label>HALAL ICHIBA</label><input type="number" id="i_halal" value="40000" min="0" oninput="compute()"><span class="hint">金額確認中</span></div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-title">📣 マーケ費（要確認）</div>
+    <div class="inp-row"><label>NLM（Google）</label><input type="number" id="i_nlm" value="15000" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>YOLOJAPAN</label><input type="number" id="i_yolo" value="40000" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>BuzzTraveler</label><input type="number" id="i_buzz" value="33000" min="0" oninput="compute()"></div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-title">📅 7月 実績入力</div>
+    <div class="inp-row"><label>店舗売上（円）</label><input type="number" id="i_jul_sales" value="0" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>客数（人）</label><input type="number" id="i_jul_pax" value="0" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>食材費（円）</label><input type="number" id="i_jul_food" value="0" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>マーケ費（円）</label><input type="number" id="i_jul_mkt" value="0" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>光熱費（円）</label><input type="number" id="i_jul_util" value="0" min="0" oninput="compute()"></div>
+    <div class="inp-row"><label>バイト 月間時間合計</label><input type="number" id="i_jul_pt_h" value="0" min="0" oninput="compute()"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-area">
+
+<!-- ===== Tab 1: 予実 ===== -->
+<div id="panel-yojitsu" class="panel on">
+  <div class="sec-title">月次 予実管理表　―　目標 vs 実績</div>
+  <div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">項目</th>
+        <th colspan="3" class="grp" style="background:#254F84">2026年6月　確定</th>
+        <th colspan="3" class="grp" style="background:#1B3659">2026年7月　入力中</th>
+      </tr>
+      <tr>
+        <th style="background:#254F84;color:#A5B4FC">目標</th>
+        <th style="background:#254F84">実績</th>
+        <th style="background:#254F84">差異</th>
+        <th style="background:#1B3659;color:#A5B4FC">目標</th>
+        <th style="background:#1B3659">実績</th>
+        <th style="background:#1B3659">差異</th>
+      </tr>
+    </thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+  </div>
+  <div class="alert" id="alert-box"></div>
+</div>
+
+<!-- ===== Tab 2: シミュレーション ===== -->
+<div id="panel-sim" class="panel">
+  <div class="sec-title">PLシミュレーション　―　3年10億への逆算</div>
+
+  <div class="ctrl-grid">
+    <div class="ctrl-item">
+      <label>1年目 年間売上目標（万円）</label>
+      <input type="number" id="s_yr1" value="20000" min="5000" oninput="computeSim()">
+    </div>
+    <div class="ctrl-item">
+      <label>食材費率目標（%）</label>
+      <input type="number" id="s_food" value="30" min="20" max="60" oninput="computeSim()">
+    </div>
+    <div class="ctrl-item">
+      <label>人件費率目標（%）</label>
+      <input type="number" id="s_labor" value="35" min="20" max="60" oninput="computeSim()">
+    </div>
+    <div class="ctrl-item">
+      <label>通販開始月（1=7月）</label>
+      <input type="number" id="s_ec_start" value="4" min="1" max="12" oninput="computeSim()">
+      <span class="hint" id="ec_lbl">10月開始</span>
+    </div>
+    <div class="ctrl-item">
+      <label>客単価目標（円）</label>
+      <input type="number" id="s_utp" value="2500" min="2000" oninput="computeSim()">
+      <span class="hint">議事録：主力2,300円 / 実績2,432円</span>
+    </div>
+    <div class="ctrl-item">
+      <label>1年目末 外国人比率目標（%）</label>
+      <input type="number" id="s_fgn" value="25" min="15" max="60" oninput="computeSim()">
+      <span class="hint">現状：15.5%（6月実績）</span>
+    </div>
+  </div>
+  <div class="ctrl-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="ctrl-item">
+      <label>🟢 ハラル：外国人内比率 現状（%）</label>
+      <input type="number" id="s_hl_now" value="30" min="0" max="100" oninput="computeSim()">
+      <span class="hint">※ 現状不明、仮置き30%（要確認）</span>
+    </div>
+    <div class="ctrl-item">
+      <label>🟢 ハラル：1年目末 目標比率（%）</label>
+      <input type="number" id="s_hl_yr1" value="40" min="0" max="100" oninput="computeSim()">
+    </div>
+    <div class="ctrl-item">
+      <label>🟢 ハラル：3年目末 目標比率（%）</label>
+      <input type="number" id="s_hl_yr3" value="55" min="0" max="100" oninput="computeSim()">
+      <span class="hint">日本店舗の母数制約を考慮した上限</span>
+    </div>
+  </div>
+
+  <!-- 年次サマリー -->
+  <div class="sub-title">年次サマリー</div>
+  <div class="tbl-wrap"><table id="sim-summary"></table></div>
+
+  <!-- 月次：売上・利益 -->
+  <div class="sub-title">月次計画　① 売上・成長率・利益</div>
+  <div class="mom-note">
+    <div class="mom-note-title">📊 対前月成長率がマイナスになる理由</div>
+    <div class="mom-note-body">
+      <p>この表の売上目標は「<strong>年間合計から逆算した月平均</strong>」に「<strong>季節係数</strong>」を掛けて算出しています。<br>
+      係数が前月より小さい月は、売上額も前月を下回るため、成長率がマイナスになります。<strong>売上が落ちること自体は計画どおり</strong>です。</p>
+      <div class="sratio-grid" id="sratio-grid"></div>
+      <p style="margin-top:8px;color:var(--muted)">※ 係数は現状仮置きです。実績データが蓄積されたら実態に合わせて更新してください。<br>
+      ※ 対前月比は「季節的な波」を見るもので、年間全体では目標通り積み上がります。</p>
+    </div>
+  </div>
+  <div class="tbl-wrap"><table id="sim-monthly"></table></div>
+
+  <!-- 月次：客数KPI -->
+  <div class="sub-title">月次計画　② 必要客数KPI　（平日/土日 × 日本人/ハラル/その他外国人）</div>
+  <div class="legend">
+    <div class="leg"><div class="dot" style="background:var(--jp)"></div><b>青</b>：日本人</div>
+    <div class="leg"><div class="dot" style="background:var(--halal)"></div><b>緑</b>：ハラル/ムスリム</div>
+    <div class="leg"><div class="dot" style="background:var(--other)"></div><b>紫</b>：その他外国人</div>
+    <div class="leg" style="margin-left:8px;color:var(--warn)">⚠ ハラル現状比率は仮置き（要実績入力）</div>
+  </div>
+  <div class="tbl-wrap"><table id="sim-kpi"></table></div>
+
+  <div class="alert">
+    <strong>客単価の根拠（議事録より）：</strong>
+    主力「THE CRAAAAAB」2,000円・「THE RED」2,500円・「THE INFERNO」5,000円。
+    議事録での発言：「客単価2,300円（主力）」「客単価2,500円を上げる」。
+    6月実績：2,432円（売上÷客数）。シミュレーション目標は<strong>2,500円</strong>で設定。<br>
+    <strong>ハラル比率の前提：</strong>現状の外国人内ハラル比率はデータなし（仮30%）。
+    今後の日次記録に「ハラル/ムスリム客数」列の追加を推奨。
+    日本の店舗として母数制約があるため、<strong>3年目でもハラル55%（外国人内）</strong>を上限として設定。
+  </div>
+</div>
+
+<!-- ===== Tab 3: 前提情報 ===== -->
+<div id="panel-assum" class="panel">
+  <div class="sec-title">前提情報・算出ロジック</div>
+  <div class="assum-grid">
+    <div class="card">
+      <h3>📍 店舗基本情報（確定）</h3>
+      <div class="kv"><span class="k">席数</span><span class="v">20席</span></div>
+      <div class="kv"><span class="k">営業時間</span><span class="v">9時間 / 日</span></div>
+      <div class="kv"><span class="k">定休日</span><span class="v">週1回（月曜）</span></div>
+      <div class="kv"><span class="k">月間稼働日数</span><span class="v">約25日（平日17日、土日8日）</span></div>
+      <div class="kv"><span class="k">家賃</span><span class="v">945,000円 / 月</span></div>
+      <div class="kv"><span class="k">光熱費（6月実績）</span><span class="v">135,669円 / 月</span></div>
+    </div>
+    <div class="card">
+      <h3>🎯 6月実績KPI（データベース）</h3>
+      <div class="kv"><span class="k">月間売上</span><span class="v">7,341,500円</span></div>
+      <div class="kv"><span class="k">月間客数</span><span class="v">3,019人</span></div>
+      <div class="kv"><span class="k">平日客数/日（JP+外国人）</span><span class="v">115人（JP:96 外国人:19）</span></div>
+      <div class="kv"><span class="k">土日客数/日（JP+外国人）</span><span class="v">162人（JP:139 外国人:23）</span></div>
+      <div class="kv"><span class="k">外国人比率（6月実績）</span><span class="v">15.5%（467/3,019人）</span></div>
+      <div class="kv"><span class="k">客単価（実績）</span><span class="v">2,432円</span></div>
+    </div>
+    <div class="card">
+      <h3>🕌 ハラル/ムスリム前提</h3>
+      <div class="kv"><span class="k">ハラル認証</span><span class="v">取得済み</span></div>
+      <div class="kv"><span class="k">現状外国人内ハラル比率</span><span class="v" style="color:var(--warn)">不明（仮30%）</span></div>
+      <div class="kv"><span class="k">ハラル優先の理由</span><span class="v">認証済み・差別化要因・インバウンド戦略</span></div>
+      <div class="kv"><span class="k">母数制約</span><span class="v">日本の日常店舗として上限あり</span></div>
+      <div class="kv"><span class="k">3年目ハラル上限（想定）</span><span class="v">外国人内55%（日本店舗）</span></div>
+    </div>
+    <div class="card">
+      <h3>🍜 客単価（議事録ベース）</h3>
+      <div class="kv"><span class="k">THE CRAAAAAB（主力・1〜10辛）</span><span class="v">2,000円</span></div>
+      <div class="kv"><span class="k">THE RED（激辛）</span><span class="v">2,500円</span></div>
+      <div class="kv"><span class="k">THE INFERNO（100辛）</span><span class="v">5,000円</span></div>
+      <div class="kv"><span class="k">議事録記載の主力単価</span><span class="v">2,300円</span></div>
+      <div class="kv"><span class="k">6月実績平均客単価</span><span class="v">2,432円（売上÷客数）</span></div>
+      <div class="kv"><span class="k">目標客単価（議事録）</span><span class="v">2,500円</span></div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <h3>🔢 算出ロジック</h3>
+      <ul class="logic-list">
+        <li>月間必要客数 → <code>月次売上目標 ÷ 客単価目標</code></li>
+        <li>平日/土日分割 → <code>6月実績比率：平日57%（17日）、土日43%（8日）</code>をベースに逆算</li>
+        <li>日本人客数ベース → <code>6月実績：平日96人/日、土日139人/日 + 年10%成長想定</code></li>
+        <li>外国人客数 → <code>月間客数 × 外国人比率（15.5%→目標値へ段階的増加）</code></li>
+        <li>ハラル客数 → <code>外国人客数 × ハラル比率（30%→目標値へ段階的増加、日本店舗上限考慮）</code></li>
+        <li>売上成長率（MoM） → <code>(当月売上 - 前月売上) ÷ 前月売上 × 100</code></li>
+        <li>売上成長率（YoY） → <code>(当年売上 - 前年売上) ÷ 前年売上 × 100</code></li>
+        <li>食材費目標 → <code>売上 × 食材費率（目標30%。現状69.7%で要改善）</code></li>
+        <li>人件費目標 → <code>売上 × 人件費率（目標35%）</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+</div><!-- /main-area -->
+</div><!-- /body -->
+
+<script>
+// --------- helpers ---------
+const fmt = n => {
+  if(n==null||isNaN(n)) return '―';
+  const s = Math.abs(Math.round(n)).toLocaleString('ja-JP');
+  return n<0?'▲'+s:s;
+};
+const pct = (n,d=1) => {
+  if(n==null||isNaN(n)||!isFinite(n)) return '―';
+  return (n*100).toFixed(d)+'%';
+};
+const cls = n => n>0?'pos':n<0?'neg':'';
+const v = id => parseFloat(document.getElementById(id)?.value)||0;
+const lerp = (a,b,t) => a + (b-a)*Math.min(1,Math.max(0,t));
+
+// --------- tab switch ---------
+function showTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('panel-'+id).classList.add('on');
+}
+
+// ========= YOJITSU =========
+function compute(){
+  const rvss   = v('i_rvss_n') * v('i_rvss_w');
+  const reg    = v('i_reg_n')  * v('i_reg_w');
+  const ptHour = v('i_pt_n')  * v('i_pt_h') * 1000;
+  const labor  = rvss + reg + ptHour;
+
+  const food_conf = 4975000;
+  const food_unc  = v('i_shim') + v('i_askul') + v('i_halal');
+  const food_jun  = food_conf + food_unc;
+  const mkt_jun   = v('i_nlm') + v('i_yolo') + v('i_buzz');
+  const equip_jun = 69262;
+  const util_jun  = 135669;
+  const rent      = 945000;
+  const cost_jun  = food_jun + labor + mkt_jun + equip_jun + util_jun + rent;
+  const sales_jun = 7341500;
+  const profit_jun = sales_jun - cost_jun;
+
+  const T6s = 9920000;
+  const T6f = T6s*.30, T6l = T6s*.35, T6m = T6s*.06, T6e = 50000, T6u = 135669, T6r = 945000;
+  const T6c = T6f+T6l+T6m+T6e+T6u+T6r;
+  const T6p = T6s - T6c;
+
+  const sal7 = v('i_jul_sales');
+  const pax7 = v('i_jul_pax');
+  const fd7  = v('i_jul_food');
+  const mk7  = v('i_jul_mkt');
+  const ut7  = v('i_jul_util')||140000;
+  const pt7  = v('i_jul_pt_h')*1000;
+  const lab7 = rvss+reg+pt7;
+  const eq7  = 70000;
+  const c7   = fd7+lab7+mk7+eq7+ut7+rent;
+  const p7   = sal7>0?(sal7-c7):null;
+  const isJ  = sal7>0;
+
+  const T7s = 12830000;
+  const T7f = T7s*.30, T7l = T7s*.35, T7m = T7s*.06, T7e = 50000, T7u = 140000;
+  const T7c = T7f+T7l+T7m+T7e+T7u+rent;
+  const T7p = T7s-T7c;
+
+  function row(label, t6,a6, t7,a7, {sub=false,cat=false,tot=false,profit=false,loss=false,pctRow=false}={}){
+    const d6=(a6!=null)?a6-t6:null;
+    const d7=(a7!=null&&isJ)?a7-t7:null;
+    const rc=cat?'cat':tot?'tot':profit?'profit':loss?'loss':sub?'sub':'';
+    const F=(n,isPct)=>isPct?(n!=null?pct(n):'―'):fmt(n);
+    const D=(n,isPct)=>isPct?(n!=null?(n*100).toFixed(1)+'pt':'―'):fmt(n);
+    return `<tr class="${rc}">
+      <td>${label}</td>
+      <td class="tgt">${F(t6,pctRow)}</td><td>${F(a6,pctRow)}</td><td class="${d6!=null?cls(d6):''}">${D(d6,pctRow)}</td>
+      <td class="tgt">${F(t7,pctRow)}</td><td>${a7!=null&&isJ?F(a7,pctRow):'―'}</td><td class="${d7!=null?cls(d7):''}">${d7!=null?D(d7,pctRow):'―'}</td>
+    </tr>`;
+  }
+
+  let h='';
+  h+=row('【売上高】','','','','',{cat:true});
+  h+=row('店舗売上',T6s,sales_jun,T7s,sal7>0?sal7:null);
+  h+=row('　客数（人）',Math.round(T6s/2400),3019,Math.round(T7s/2400),pax7>0?pax7:null,{sub:true});
+  h+=row('　客単価（円）',2400,2432,2400,(sal7>0&&pax7>0)?Math.round(sal7/pax7):null,{sub:true});
+  h+=row('通販売上',0,0,0,0);
+  h+=row('売上合計',T6s,sales_jun,T7s,sal7>0?sal7:null,{tot:true});
+  h+=row('【食材費】','','','','',{cat:true});
+  h+=row('食材費　合計',T6f,food_jun,T7f,fd7>0?fd7:null);
+  h+=row('食材費率',T6f/T6s,food_jun/sales_jun,T7f/T7s,fd7>0&&sal7>0?fd7/sal7:null,{sub:true,pctRow:true});
+  h+=row('【人件費】（仮置き）','','','','',{cat:true});
+  h+=row(`　RVSS（${v('i_rvss_n')}名×${v('i_rvss_w').toLocaleString()}円）`,rvss,rvss,rvss,isJ?rvss:null,{sub:true});
+  h+=row(`　正社員（${v('i_reg_n')}名×${v('i_reg_w').toLocaleString()}円）`,reg,reg,reg,isJ?reg:null,{sub:true});
+  h+=row(`　バイト（${v('i_pt_n')}名×${v('i_pt_h')}h×1,000円）`,ptHour,ptHour,pt7,isJ?pt7:null,{sub:true});
+  h+=row('人件費　合計',T6l,labor,T7l,isJ?lab7:null);
+  h+=row('人件費率',T6l/T6s,labor/sales_jun,T7l/T7s,isJ&&sal7>0?lab7/sal7:null,{sub:true,pctRow:true});
+  h+=row('【集客・マーケ費】','','','','',{cat:true});
+  h+=row('マーケ費　合計',T6m,mkt_jun,T7m,mk7>0?mk7:null);
+  h+=row('【備品・消耗品】','','','','',{cat:true});
+  h+=row('備品・消耗品',T6e,equip_jun,T7e,isJ?eq7:null);
+  h+=row('【ライフライン】','','','','',{cat:true});
+  h+=row('光熱費',T6u,util_jun,T7u,isJ?ut7:null);
+  h+=row('家賃',T6r,rent,T6r,isJ?rent:null);
+  h+=row('費用合計（バイト除く）',T6c,cost_jun,T7c,isJ?c7:null,{tot:true});
+  const prc = profit_jun>=0?'profit':'loss';
+  h+=row('営業利益',T6p,profit_jun,T7p,p7,{[prc]:true});
+  h+=row('営業利益率',T6p/T6s,profit_jun/sales_jun,T7p/T7s,p7!=null&&sal7>0?p7/sal7:null,{pctRow:true});
+  document.getElementById('tbl-body').innerHTML=h;
+
+  let alert='';
+  if(food_jun/sales_jun>0.5) alert+=`<strong>⚠ 食材費率 ${pct(food_jun/sales_jun)}：</strong>適正値30%の${(food_jun/sales_jun/0.3).toFixed(1)}倍。梅雨による売上低下＋固定仕入れの高止まりが主因。<br>`;
+  if(profit_jun<0) alert+=`<strong>⚠ 6月 営業利益：▲${Math.abs(Math.round(profit_jun)).toLocaleString()}円（赤字）</strong>　バイト人件費確定でさらに拡大の可能性。`;
+  if(!alert) alert='✅ 入力値に問題ありません。';
+  document.getElementById('alert-box').innerHTML=alert;
+}
+
+// ========= SIMULATION =========
+const MONTHS=['7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月','6月'];
+const MNOTES=['激辛フェア','秋山コラボ','','📦通販開始','','年末繁忙','年始閑散','','','','GW','梅雨'];
+const SRATIO=[1.20,1.05,0.90,1.00,1.10,1.30,0.80,0.90,1.05,1.10,1.30,0.85];
+const WDAY=17, WEND=8, WDAY_RATIO=0.57, WEND_RATIO=0.43;
+
+function computeSim(){
+  const yr1total = v('s_yr1')*10000;
+  const fR=v('s_food')/100, lR=v('s_labor')/100, mR=0.06;
+  const ecStart=Math.max(1,Math.min(12,Math.round(v('s_ec_start'))));
+  const utp=v('s_utp');
+  const fgnEnd1=v('s_fgn')/100;
+  const fgnStart=0.155;
+  const hlNow=v('s_hl_now')/100;
+  const hlEnd1=v('s_hl_yr1')/100;
+  const hlEnd3=v('s_hl_yr3')/100;
+  const rent=945000, utilBase=140000;
+  const fixM=rent+utilBase;
+
+  document.getElementById('ec_lbl').textContent=MONTHS[ecStart-1]+'開始';
+
+  // 季節係数チップ描画
+  let chips='';
+  for(let i=0;i<12;i++){
+    const mom=i===0?null:(SRATIO[i]/SRATIO[i-1]-1);
+    const cls=i===0?'chip-first':mom>=0?'chip-up':'chip-dn';
+    const momTxt=i===0?'基準月':(mom>=0?'+':'')+((mom*100).toFixed(0))+'%';
+    chips+=`<div class="sratio-chip ${cls}">
+      <span class="mo">${MONTHS[i]}</span>
+      <span class="rat">×${SRATIO[i].toFixed(2)}</span>
+      <span class="mom">${momTxt}</span>
+    </div>`;
+  }
+  document.getElementById('sratio-grid').innerHTML=chips;
+
+  const yr2total=yr1total*2.5, yr3total=yr1total*5;
+  const storeYr1=yr1total*0.75;
+  const ecTotal1=yr1total*0.25;
+  const ecMonths1=12-ecStart+1;
+
+  // ---- year summary ----
+  const calcYearProfit=(yt,fR2,lR2,stores,fixM2)=>yt*(1-fR2-lR2-mR)-fixM2*12-500000*12;
+  const yr1p=calcYearProfit(yr1total,fR,lR,1,fixM);
+  const yr2p=calcYearProfit(yr2total,fR*0.93,lR*0.87,1,fixM*1.5);
+  const yr3p=calcYearProfit(yr3total,fR*0.83,lR*0.71,1,fixM*2);
+
+  // 年次外国人・ハラル
+  const fgn1avg=(fgnStart+fgnEnd1)/2;
+  const fgn2=Math.min(0.50, fgnEnd1*1.4);
+  const fgn3=Math.min(0.55, fgnEnd1*1.8);
+  const hl1avg=(hlNow+hlEnd1)/2;
+  const hl2=Math.min(hlEnd3*0.75, hlEnd1*1.2);
+  const hl3=hlEnd3;
+
+  const yrPax=(tot,u)=>Math.round(tot/u);
+  const p1=yrPax(yr1total,utp), p2=yrPax(yr2total,utp*1.03), p3=yrPax(yr3total,utp*1.06);
+
+  let sum=`<thead><tr>
+    <th style="text-align:left;min-width:160px">項目</th>
+    <th>1年目　FY2026</th><th>2年目　FY2027</th><th>3年目　FY2028</th>
+  </tr></thead><tbody>`;
+  const sr=(l,v1,v2,v3,{tot=false,profit=false,pctRow=false,growth=false}={})=>{
+    const rc=tot?'tot':profit?'profit':'';
+    const F=pctRow?pct:fmt;
+    let g2='―', g3='―';
+    if(growth){
+      g2=`<span class="pos">+${((v2/v1-1)*100).toFixed(0)}%</span>`;
+      g3=`<span class="pos">+${((v3/v2-1)*100).toFixed(0)}%</span>`;
+    }
+    return `<tr class="${rc}"><td>${l}</td><td>${F(v1)}</td>
+      <td>${F(v2)} ${g2}</td><td>${F(v3)} ${g3}</td></tr>`;
+  };
+  sum+=sr('売上合計',yr1total,yr2total,yr3total,{tot:true,growth:true});
+  sum+=sr('　店舗売上',yr1total*0.75,yr2total*0.4,yr3total*0.36,{});
+  sum+=sr('　通販売上',ecTotal1,yr2total*0.6,yr3total*0.64,{});
+  sum+=sr('月間客数（年平均）',Math.round(p1/12),Math.round(p2/12),Math.round(p3/12),{});
+  sum+=sr('外国人比率',fgn1avg,fgn2,fgn3,{pctRow:true});
+  sum+=sr('　うち ハラル比率（外国人内）',hl1avg,hl2,hl3,{pctRow:true});
+  sum+=sr('食材費率',fR,fR*0.93,fR*0.83,{pctRow:true});
+  sum+=sr('人件費率',lR,lR*0.87,lR*0.71,{pctRow:true});
+  sum+=sr('営業利益（概算）',yr1p,yr2p,yr3p,{profit:true,growth:true});
+  sum+=sr('営業利益率',yr1p/yr1total,yr2p/yr2total,yr3p/yr3total,{pctRow:true});
+  sum+='</tbody>';
+  document.getElementById('sim-summary').innerHTML=sum;
+
+  // ---- monthly table ----
+  const storeBase=storeYr1/12;
+  let prev=0, totS=0, totP=0;
+  let mon=`<thead><tr>
+    <th style="text-align:left;min-width:60px">月</th>
+    <th>店舗売上目標</th><th>通販売上</th><th>売上合計</th>
+    <th>対前月<br>成長率</th>
+    <th>食材費(${Math.round(fR*100)}%)</th>
+    <th>人件費(${Math.round(lR*100)}%)</th>
+    <th>固定費</th>
+    <th>営業利益</th><th>利益率</th><th>備考</th>
+  </tr></thead><tbody>`;
+
+  const monthlyData=[];
+  for(let i=0;i<12;i++){
+    const storeM=Math.round(storeBase*SRATIO[i]);
+    const ecM=i>=(ecStart-1)?Math.round(ecTotal1/(ecMonths1||1)):0;
+    const salesM=storeM+ecM;
+    const profM=salesM*(1-fR-lR-mR)-fixM;
+    const mom=prev>0?(salesM/prev-1):null;
+    const note=i===(ecStart-1)?MNOTES[i]||'':(MNOTES[i]||'');
+    monthlyData.push({i,storeM,ecM,salesM,profM,mom});
+    const pc=profM>=0?'pos':'neg';
+    mon+=`<tr>
+      <td>${MONTHS[i]}</td>
+      <td>${fmt(storeM)}</td>
+      <td>${ecM>0?fmt(ecM):'―'}</td>
+      <td>${fmt(salesM)}</td>
+      <td class="${mom!=null?cls(mom):''}">${mom!=null?(mom>0?'+':'')+((mom*100).toFixed(1))+'%':'―'}</td>
+      <td>${fmt(Math.round(salesM*fR))}</td>
+      <td>${fmt(Math.round(salesM*lR))}</td>
+      <td>${fmt(fixM)}</td>
+      <td class="${pc}">${fmt(profM)}</td>
+      <td class="${pc}">${pct(profM/salesM)}</td>
+      <td style="color:var(--muted);font-size:11px">${note}</td>
+    </tr>`;
+    totS+=salesM; totP+=profM; prev=salesM;
+  }
+  const tpc=totP>=0?'profit':'loss';
+  mon+=`<tr class="${tpc}"><td>合計</td><td colspan="2"></td><td>${fmt(totS)}</td><td>―</td><td>―</td><td>―</td><td>―</td><td>${fmt(totP)}</td><td>${pct(totP/totS)}</td><td></td></tr>`;
+  mon+='</tbody>';
+  document.getElementById('sim-monthly').innerHTML=mon;
+
+  // ---- KPI table ----
+  let kpi=`<thead>
+    <tr>
+      <th rowspan="2" style="text-align:left;min-width:60px">月</th>
+      <th rowspan="2">月間<br>必要客数</th>
+      <th colspan="4" class="grp weekday">平日（${WDAY}日/月）</th>
+      <th colspan="4" class="grp weekend">土日（${WEND}日/月）</th>
+      <th rowspan="2">外国人<br>比率</th>
+      <th rowspan="2">ハラル比率<br>（外国人内）</th>
+    </tr>
+    <tr>
+      <th class="weekday">合計/日</th>
+      <th class="jp">日本人</th>
+      <th class="halal">ハラル</th>
+      <th class="other">その他<br>外国人</th>
+      <th class="weekend">合計/日</th>
+      <th class="jp">日本人</th>
+      <th class="halal">ハラル</th>
+      <th class="other">その他<br>外国人</th>
+    </tr>
+  </thead><tbody>`;
+
+  // Base JP (from 6月実績: weekday 96/日, weekend 139/日, growing 10%/year → ~0.8%/month)
+  const JP_WD_BASE=96, JP_WE_BASE=139;
+  const JP_GROWTH=0.008; // ~10% per year / 12 months
+
+  for(let i=0;i<12;i++){
+    const {salesM}=monthlyData[i];
+    const totalPax=Math.round(salesM/utp);
+    const t=i/11; // 0→1 over the year
+    const fgnRatio=lerp(fgnStart,fgnEnd1,t);
+    const halalRatio=lerp(hlNow,hlEnd1,t);
+    const jpRatio=1-fgnRatio;
+    const halalFrac=fgnRatio*halalRatio;
+    const otherFrac=fgnRatio*(1-halalRatio);
+
+    // Per-day by type (weekday)
+    const wdTotal=Math.round(totalPax*WDAY_RATIO/WDAY);
+    const wdJP=Math.round(JP_WD_BASE*(1+JP_GROWTH*i));
+    const wdForeign=Math.max(0,wdTotal-wdJP);
+    const wdHalal=Math.round(wdForeign*halalRatio);
+    const wdOther=wdForeign-wdHalal;
+
+    // Per-day by type (weekend)
+    const weTotal=Math.round(totalPax*WEND_RATIO/WEND);
+    const weJP=Math.round(JP_WE_BASE*(1+JP_GROWTH*i));
+    const weForeign=Math.max(0,weTotal-weJP);
+    const weHalal=Math.round(weForeign*halalRatio);
+    const weOther=weForeign-weHalal;
+
+    kpi+=`<tr>
+      <td>${MONTHS[i]}</td>
+      <td>${fmt(totalPax)}</td>
+      <td>${wdTotal}</td>
+      <td style="color:var(--jp);font-weight:600">${wdJP}</td>
+      <td style="color:var(--halal);font-weight:600">${wdHalal}</td>
+      <td style="color:var(--other);font-weight:600">${wdOther}</td>
+      <td>${weTotal}</td>
+      <td style="color:var(--jp);font-weight:600">${weJP}</td>
+      <td style="color:var(--halal);font-weight:600">${weHalal}</td>
+      <td style="color:var(--other);font-weight:600">${weOther}</td>
+      <td>${pct(fgnRatio)}</td>
+      <td>${pct(halalRatio)}</td>
+    </tr>`;
+  }
+  kpi+='</tbody>';
+  document.getElementById('sim-kpi').innerHTML=kpi;
+}
+
+compute(); computeSim();
+</script>
+</body>
+</html>
